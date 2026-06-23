@@ -94,6 +94,7 @@ YESで選ばれた項目に必要な前提が無ければ、**何を・なぜ入
    - `hooks.PreToolUse`/`SessionStart`: 同一 `command` が無いエントリだけ**追加**（既存フックは消さない）
    - `statusLine`: 未設定なら追加。既に別の statusLine があれば**上書き前に確認**
    - `enabledPlugins`・`extraKnownMarketplaces`・`env`: **無いキーだけ追加**（既存値は保持）
+   - top-level scalar（`teammateMode`・`skipWorkflowUsageWarning`・`inputNeededNotifEnabled`・`agentPushNotifEnabled`・`remoteControlAtStartup`）: **無いキーだけ追加**（既存値は上書きしない）
    - **アトミック書き込み**: 一時ファイルに書いて `mv`（途中失敗で settings.json を壊さない）
    - jq 例（deny union・null安全・アトミック）:
      ```bash
@@ -151,7 +152,7 @@ YESで選ばれた項目に必要な前提が無ければ、**何を・なぜ入
 | **staleness** | **90日ごと**に設定の棚卸しを促すリマインダー | 長く使う人 | - |
 | **gitleaks** | **秘密情報をコミットしようとすると止める** | git を使う全員 | brew |
 | **zip / fetchjs** | 配布ZIP作成 / JSページ取得の補助スキル | 該当作業がある人 | (fetchjsはnode) |
-| **agent-teams** | 複数のAIを**並列実行**して協調作業。`env.AGENT_TEAMS=1`＋`teammateMode=auto`＋workflow警告抑制（分割ペインは tmux/iTerm2 があれば、無ければ画面内パネルに自動フォールバック＝**tmux不要**） | 大きい作業を分担したい人 | トークン約7倍に注意 |
+| **agent-teams** | 複数のAIを**並列実行**して協調作業。`env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`＋`teammateMode=auto`＋workflow警告抑制（分割ペインは tmux/iTerm2 があれば、無ければ画面内パネルに自動フォールバック＝**tmux不要**） | 大きい作業を分担したい人 | トークン約7倍に注意 |
 | **notifications** | **入力待ち**や**作業完了**をデスクトップ通知・プッシュで知らせる | 離席して待つ人 | - |
 | **remote-control** | 起動時に**web/モバイルからの操作**を有効化（リモートで Claude Code を操作） | 外出先から使う人 | - |
 
