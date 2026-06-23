@@ -59,7 +59,7 @@ cd claude-code-env01
 | `staleness` | 棚卸しリマインダー | フック+settings登録+基準日をスキップ |
 | `gitleaks` | 秘密情報コミット防止 | brew+共通フックをスキップ |
 | `zip` / `fetchjs` | 各スキル | スキルコピーをスキップ |
-| `agent-teams` | Agent Teams（複数AI並列＝env+teammateMode=tmux+workflow警告抑制） | settings登録をスキップ |
+| `agent-teams` | Agent Teams（複数AI並列＝env+teammateMode=auto+workflow警告抑制） | settings登録をスキップ |
 | `notifications` | 入力待ち/完了のデスクトップ・プッシュ通知 | settings登録をスキップ |
 | `remote-control` | 起動時にweb/モバイルからの操作を有効化 | settings登録をスキップ |
 

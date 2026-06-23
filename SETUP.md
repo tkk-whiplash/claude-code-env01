@@ -151,7 +151,7 @@ YESで選ばれた項目に必要な前提が無ければ、**何を・なぜ入
 | **staleness** | **90日ごと**に設定の棚卸しを促すリマインダー | 長く使う人 | - |
 | **gitleaks** | **秘密情報をコミットしようとすると止める** | git を使う全員 | brew |
 | **zip / fetchjs** | 配布ZIP作成 / JSページ取得の補助スキル | 該当作業がある人 | (fetchjsはnode) |
-| **agent-teams** | 複数のAIを**並列実行**して協調作業（tmuxでペイン分割）。`env.AGENT_TEAMS=1`＋`teammateMode=tmux`＋workflow警告抑制 | 大きい作業を分担したい人 | tmux（トークン約7倍に注意） |
+| **agent-teams** | 複数のAIを**並列実行**して協調作業。`env.AGENT_TEAMS=1`＋`teammateMode=auto`＋workflow警告抑制（分割ペインは tmux/iTerm2 があれば、無ければ画面内パネルに自動フォールバック＝**tmux不要**） | 大きい作業を分担したい人 | トークン約7倍に注意 |
 | **notifications** | **入力待ち**や**作業完了**をデスクトップ通知・プッシュで知らせる | 離席して待つ人 | - |
 | **remote-control** | 起動時に**web/モバイルからの操作**を有効化（リモートで Claude Code を操作） | 外出先から使う人 | - |
 
