@@ -89,7 +89,7 @@
       }
     }
   },
-  "teammateMode": "tmux",
+  "teammateMode": "auto",
   "skipWorkflowUsageWarning": true,
   "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": true,

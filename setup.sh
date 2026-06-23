@@ -23,7 +23,7 @@
 #   gitleaks     秘密情報コミット防止（brew+共通pre-commitフック）
 #   zip          配布ZIP作成スキル（ECプラグイン向け）
 #   fetchjs      JSレンダリングページ取得スキル
-#   agent-teams  Agent Teams（複数エージェント並列・env+teammateMode=tmux+workflow警告抑制／要tmux・トークン約7倍）
+#   agent-teams  Agent Teams（複数エージェント並列・env+teammateMode=auto+workflow警告抑制／分割ペインは任意・トークン約7倍）
 #   notifications 入力待ち/完了のデスクトップ・プッシュ通知
 #   remote-control 起動時にリモート操作を有効化（web/モバイルから操作）
 set -e
@@ -66,7 +66,7 @@ C_GITLEAKS=$(ask gitleaks "gitleaks（秘密情報コミット防止）")
 C_ZIP=$(ask zip "plugin-zipスキル（配布ZIP定型化）")
 C_FETCHJS=$(ask fetchjs "fetch-js-pageスキル（JSページ取得）")
 echo "  --- エージェントハーネス設定（好みで。未選択でも基本機能は動く） ---"
-C_AGENTTEAMS=$(ask agent-teams "Agent Teams＝複数AIを並列実行（tmuxペイン分割で協調。要tmux・トークン約7倍）")
+C_AGENTTEAMS=$(ask agent-teams "Agent Teams＝複数AIを並列実行して協調（teammateMode=auto: 分割ペインはtmux/iTerm2があれば、無ければ画面内パネル。トークン約7倍）")
 C_NOTIFICATIONS=$(ask notifications "通知＝入力待ち/作業完了をデスクトップ・プッシュで知らせる")
 C_REMOTECONTROL=$(ask remote-control "リモート操作＝起動時にweb/モバイルからの操作を有効化")
 
