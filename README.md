@@ -41,7 +41,7 @@ cd claude-code-env01
 
 **全く同じ環境を強制しない設計**: 選択に応じて settings.json・CLAUDE.md（該当セクション）・agents/skills/MCP が動的に組み立てられる。Codex を外すと、プラグイン・MCP・デュアルレビューagent・協働ループ規約・略語がまとめて除外され、残骸も残らない。
 
-> 課金注意: 出力エフォート（`effortLevel`）は配布デフォルトに**含めない**（各自 `/effort` で調整）。`env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`（Agent Teams 実験機能）は settings.json に入る。不要なら導入後に削除可。
+> 課金注意: 出力エフォート（`effortLevel`）は配布デフォルトに**含めない**（各自 `/effort` で調整）。`env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`（Agent Teams 実験機能）は **`agent-teams` を選んだ時のみ** settings.json に入る（未選択なら入らない）。
 
 | キー | コンポーネント | 外すとどうなる |
 |---|---|---|

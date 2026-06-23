@@ -37,7 +37,7 @@ for a in "$@"; do
     --yes) YES_ALL=1 ;;
     --minimal) YES_ALL=1; SKIP=",superpowers,claude-mem,lsp,mdmgmt,codex,gemini,context7,playwright,staleness,gitleaks,zip,fetchjs,agent-teams,notifications,remote-control," ;;
     --skip=*) SKIP=",${a#--skip=}," ;;
-    -h|--help) sed -n '2,22p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,28p' "$0"; exit 0 ;;
   esac
 done
 
