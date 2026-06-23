@@ -89,6 +89,11 @@
       }
     }
   },
+  "teammateMode": "tmux",
+  "skipWorkflowUsageWarning": true,
+  "inputNeededNotifEnabled": true,
+  "agentPushNotifEnabled": true,
+  "remoteControlAtStartup": true,
   "statusLine": {
     "type": "command",
     "command": "$HOME/.claude/statusline-command.sh"
