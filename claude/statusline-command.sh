@@ -5,6 +5,11 @@
 
 input=$(cat)
 
+# 通常色＝青。古い（resets_at が過去）スナップショットは無装飾に落とす方針。
+# コンテキストバーは独自の緑/黄/赤色のため対象外。
+blue=$'\033[34m'
+ncolor=$'\033[0m'
+
 # epoch 秒 → "→HH:MM(残XhYm)" を返す（過去/失敗時は空文字）
 fmt_reset_suffix() {
   local epoch="$1" hm now remain rh rm out=""
@@ -57,6 +62,10 @@ if [[ -n "$rl5" ]]; then
   rl5_int=$(LC_ALL=C printf '%.0f' "$rl5")
   reset_at=$(echo "$input" | jq -r '.rate_limits.five_hour.resets_at // empty')
   rl5_part="5h:${rl5_int}%$(fmt_reset_suffix "$reset_at")"
+  # 有効（resets_at 未来 or 不明）なら青、古い（過去）なら無装飾
+  if [[ -z "$reset_at" ]] || (( reset_at > $(date +%s) )); then
+    rl5_part="${blue}${rl5_part}${ncolor}"
+  fi
 fi
 
 # --- Codex 使用量（最新セッションログのレート制限スナップショット・5時間枠=primary） ---
@@ -75,6 +84,15 @@ if [[ -n "$cx_session" ]]; then
     if [[ -n "$cx_pct" ]]; then
       cx_int=$(LC_ALL=C printf '%.0f' "$cx_pct")
       cx_part="Cx:${cx_int}%$(fmt_reset_suffix "$cx_reset")"
+      # 新しいスナップショット（resets_at が未来＝有効）なら青で強調。
+      # 古い（窓リセット済み）なら通常色（無装飾）で控えめに。
+      # 注意: Cx 値は Codex 最終実行時点のもの。新しい Codex 実行までは更新されない
+      if [[ -n "$cx_reset" ]]; then
+        cx_now=$(date +%s)
+        if (( cx_reset > cx_now )); then
+          cx_part="${blue}${cx_part}${ncolor}"
+        fi
+      fi
     fi
   fi
 fi
@@ -96,15 +114,19 @@ fi
 branch=""
 if [[ -n "$cwd" ]] && git -C "$cwd" rev-parse --git-dir &>/dev/null 2>&1; then
   branch=$(git -C "$cwd" --no-optional-locks symbolic-ref --short HEAD 2>/dev/null)
+  # 未コミット変更があれば * を付与（コミット忘れ防止）
+  if [[ -n "$branch" ]] && [[ -n "$(git -C "$cwd" --no-optional-locks status --porcelain 2>/dev/null)" ]]; then
+    branch="${branch}*"
+  fi
 fi
 
 # --- 出力を組み立て ---
 parts=("$ctx_part")
 [[ -n "$rl5_part" ]] && parts+=("$rl5_part")
 [[ -n "$cx_part" ]] && parts+=("$cx_part")
-parts+=("$model")
-[[ -n "$branch" ]] && parts+=("$branch")
-parts+=("$cwd_short")
+parts+=("${blue}${model}${ncolor}")
+[[ -n "$branch" ]] && parts+=("${blue}${branch}${ncolor}")
+parts+=("${blue}${cwd_short}${ncolor}")
 
 output=""
 for part in "${parts[@]}"; do
