@@ -28,7 +28,7 @@
 - パフォーマンスのため、テストは単体で実行（全体実行は避ける）
 - 変更前に必ず既存コードを読んで理解すること
 - **委託基準**: 独立タスクが2個以上ある、または設計/実装/レビューを分離する価値がある実装作業は subagent に委託（subagent駆動開発）。小修正（数行の変更・設定編集・確認コマンド）は直接実行してよい
-- **計画/実行ワークフローは superpowers に一本化**（brainstorming → writing-plans → executing-plans / subagent-driven-development）。claude-mem はメモリ用途のみ（mem-search / timeline系）に使い、make-plan / do 等の計画系skillは使わない
+- **計画/実行ワークフローは superpowers に一本化**（brainstorming → writing-plans → executing-plans / subagent-driven-development）
 - **Agent Teams / Workflows は明示指示時のみ**。個人開発スケール＝3〜8 agent。prod操作・push・secret が絡む作業では使わない
 
 <!-- BEGIN:gemini -->

@@ -62,7 +62,6 @@
     ]
   },
   "enabledPlugins": {
-    "claude-mem@thedotmack-claude-mem": true,
     "superpowers@superpowers-marketplace": true,
     "codex@openai-codex": true,
     "php-lsp@claude-plugins-official": true,
@@ -80,12 +79,6 @@
       "source": {
         "source": "github",
         "repo": "openai/codex-plugin-cc"
-      }
-    },
-    "thedotmack-claude-mem": {
-      "source": {
-        "source": "github",
-        "repo": "thedotmack/claude-mem"
       }
     }
   },
