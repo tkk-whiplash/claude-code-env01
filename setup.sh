@@ -9,7 +9,6 @@
 #
 # コンポーネントキー:
 #   superpowers  計画/TDDワークフローskill群プラグイン
-#   claude-mem   永続メモリプラグイン
 #   lsp          PHP/Python LSPプラグイン
 #   mdmgmt       CLAUDE.md管理プラグイン
 #   codex        Codex連携（プラグイン+MCP+デュアルレビューagent+協働ループ規約）
@@ -35,7 +34,7 @@ SKIP=","
 for a in "$@"; do
   case "$a" in
     --yes) YES_ALL=1 ;;
-    --minimal) YES_ALL=1; SKIP=",superpowers,claude-mem,lsp,mdmgmt,codex,gemini,context7,playwright,staleness,gitleaks,zip,fetchjs,agent-teams,notifications,remote-control," ;;
+    --minimal) YES_ALL=1; SKIP=",superpowers,lsp,mdmgmt,codex,gemini,context7,playwright,staleness,gitleaks,zip,fetchjs,agent-teams,notifications,remote-control," ;;
     --skip=*) SKIP=",${a#--skip=}," ;;
     -h|--help) sed -n '2,28p' "$0"; exit 0 ;;
   esac
@@ -51,7 +50,6 @@ ask() { # $1=キー $2=説明 → "y"/"n" を返す
 
 echo "=== コンポーネント選択 ==="
 C_SUPERPOWERS=$(ask superpowers "superpowers（計画/TDDワークフロー）")
-C_CLAUDEMEM=$(ask claude-mem "claude-mem（永続メモリ）")
 C_LSP=$(ask lsp "LSPプラグイン（PHP/Python）")
 C_MDMGMT=$(ask mdmgmt "claude-md-management（CLAUDE.md管理）")
 C_CODEX=$(ask codex "Codex連携（デュアルレビュー・協働ループ）")
@@ -124,7 +122,6 @@ fi
 # settings.json: 選択に応じて動的生成
 COMPS=""
 [ "$C_SUPERPOWERS" = y ] && COMPS="$COMPS,superpowers"
-[ "$C_CLAUDEMEM" = y ] && COMPS="$COMPS,claude-mem"
 [ "$C_LSP" = y ] && COMPS="$COMPS,lsp"
 [ "$C_MDMGMT" = y ] && COMPS="$COMPS,mdmgmt"
 [ "$C_CODEX" = y ] && COMPS="$COMPS,codex"
@@ -145,7 +142,6 @@ def drop(plugin, market=None):
     ep.pop(plugin, None)
     if market: mk.pop(market, None)
 if 'superpowers' not in comps: drop('superpowers@superpowers-marketplace', 'superpowers-marketplace')
-if 'claude-mem' not in comps: drop('claude-mem@thedotmack-claude-mem', 'thedotmack-claude-mem')
 if 'codex' not in comps: drop('codex@openai-codex', 'openai-codex')
 if 'lsp' not in comps:
     drop('php-lsp@claude-plugins-official'); drop('pyright-lsp@claude-plugins-official')

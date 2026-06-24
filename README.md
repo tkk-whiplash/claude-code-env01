@@ -46,7 +46,6 @@ cd claude-code-env01
 | キー | コンポーネント | 外すとどうなる |
 |---|---|---|
 | `superpowers` | 計画/TDDワークフローskill群 | プラグイン宣言から除外 |
-| `claude-mem` | 永続メモリ | 同上 |
 | `lsp` | PHP/Python LSP | 同上 |
 | `mdmgmt` | CLAUDE.md管理 | 同上 |
 | `codex` | Codex連携一式（略語 `cr`/`ccr`/`cx`、AI協働ループの Codex 部分） | プラグイン+MCP+code-reviewer agent+`cr`/`ccr`/`cx`/`cgx` を除外 |
@@ -72,7 +71,7 @@ cd claude-code-env01
 | パス | 内容 |
 |---|---|
 | `claude/CLAUDE.md` | グローバルルール（委託基準・レビュー濃淡・データ保護・**file:// パス併記**＝cmux/Ghostty でクリック起動・Codexループ等）。`<>` は要カスタマイズ |
-| `claude/settings.json` | permissions（auto＋**秘密鍵denyルール**）・プラグイン宣言（superpowers / claude-mem / codex / LSP）・棚卸しフック登録 |
+| `claude/settings.json` | permissions（auto＋**秘密鍵denyルール**）・プラグイン宣言（superpowers / codex / LSP）・棚卸しフック登録 |
 | `claude/agents/code-reviewer.md` | Claude＋Codexデュアルレビューagent（`model: opus` エイリアス＝バージョンpinしない） |
 | `claude/skills/plugin-zip/` | 配布ZIP作成スキル（テスト確認→白ラベル検査→構造検証） |
 | `claude/skills/fetch-js-page/` | JSレンダリング必須ページのPlaywright取得スキル |
