@@ -97,6 +97,63 @@ if [[ -n "$cx_session" ]]; then
   fi
 fi
 
+# --- 稼働中エージェント（このセッションの subagent 作業＝in_progress タスク） ---
+# ソース: ~/.claude/tasks/<session_id>/*.json の status=="in_progress"
+#   session_id は statusLine 入力にそのまま入るのでディレクトリを直接引ける。
+# 「稼働中か」の判定: in_progress に切り替わった時刻（task json の mtime）からの
+#   経過時間を併記する。statusLine が描画されている＝現セッションは生存中なので、
+#   経過が異常に長い in_progress は stall/取りこぼし疑い（黄色で警告）。
+#   ⚠ in-process エージェントは専用 PID/heartbeat を持たないため、サブエージェントが
+#   crash して lead が completed にし損ねると in_progress のまま残りうる（経過時間で気付ける）。
+agent_part=""
+sid=$(echo "$input" | jq -r '.session_id // empty')
+if [[ -n "$sid" && -d "${HOME}/.claude/tasks/${sid}" ]]; then
+  tdir="${HOME}/.claude/tasks/${sid}"
+  ip_count=0
+  show_subj=""
+  show_mtime=0
+  # (N)=null_glob: マッチ無しでも空。各 in_progress を走査し、最長稼働中（mtime 最小＝
+  #   一番前に in_progress 化＝stall を最も疑うべき）1件を代表表示する。
+  for tf in "${tdir}"/*.json(N.); do
+    st=$(jq -r '.status // empty' "$tf" 2>/dev/null)
+    [[ "$st" == "in_progress" ]] || continue
+    ip_count=$(( ip_count + 1 ))
+    mt=$(stat -f %m "$tf" 2>/dev/null)
+    [[ -z "$mt" ]] && mt=0
+    # 代表＝最も古く in_progress 化した（mtime 最小）タスク＝最長稼働
+    if (( show_mtime == 0 || mt < show_mtime )); then
+      show_mtime=$mt
+      show_subj=$(jq -r '.subject // .description // ""' "$tf" 2>/dev/null)
+    fi
+  done
+  if (( ip_count > 0 )); then
+    # 代表タスク名を 14 文字に短縮（改行は除去）
+    show_subj="${show_subj//$'\n'/ }"
+    [[ ${#show_subj} -gt 14 ]] && show_subj="${show_subj[1,14]}…"
+    # 経過時間（in_progress 化からの分）
+    el_part=""
+    if (( show_mtime > 0 )); then
+      el=$(( ($(date +%s) - show_mtime) / 60 ))
+      (( el < 0 )) && el=0
+      if   (( el >= 60 )); then el_part="$(( el / 60 ))h$(( el % 60 ))m"
+      else                      el_part="${el}m"
+      fi
+    fi
+    # 色: 通常はシアン、20 分以上 in_progress なら stall 疑いで黄色
+    if (( show_mtime > 0 )) && (( ($(date +%s) - show_mtime) >= 1200 )); then
+      acolor=$'\033[33m'
+    else
+      acolor=$'\033[36m'
+    fi
+    areset=$'\033[0m'
+    if [[ -n "$show_subj" ]]; then
+      agent_part="${acolor}⚙${ip_count} ${show_subj}${el_part:+ (${el_part})}${areset}"
+    else
+      agent_part="${acolor}⚙${ip_count}${el_part:+ (${el_part})}${areset}"
+    fi
+  fi
+fi
+
 # --- モデル名 ---
 model=$(echo "$input" | jq -r '.model.display_name // empty')
 [[ -z "$model" ]] && model="--"
@@ -124,6 +181,7 @@ fi
 parts=("$ctx_part")
 [[ -n "$rl5_part" ]] && parts+=("$rl5_part")
 [[ -n "$cx_part" ]] && parts+=("$cx_part")
+[[ -n "$agent_part" ]] && parts+=("$agent_part")
 parts+=("${blue}${model}${ncolor}")
 [[ -n "$branch" ]] && parts+=("${blue}${branch}${ncolor}")
 parts+=("${blue}${cwd_short}${ncolor}")
