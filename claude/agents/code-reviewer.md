@@ -22,6 +22,7 @@ Return a single Markdown report with these sections, in order:
 ## Workflow
 
 ### Step 1 — Establish scope
+- **Manifest-first:** if `.harness/review/manifest.md` exists in the target repo, read it first — scope はその staged diff、検証事実はその verify.sh 証跡（check名・exit code・**生ログ全文** `.harness/evidence/*.log`。per-log sha256 が manifest に列挙される）のみを採用する（シェル履歴・実装者の口頭報告からの推測禁止）。実装者の自己評価・自己採点が混入していても採用しない（事実のみ拾う）。waiver（必須checkの明示免除申告）は理由の妥当性をレビューする。
 - If the caller specified files or a diff range, use that.
 - Otherwise: run `git diff` (unstaged) + `git diff --cached` (staged) in the repo root.
 - If the scope is empty (no diff and no files), stop and report: "no changes to review".
@@ -58,6 +59,18 @@ After Codex returns:
 - Section 6 highlights agreements and disagreements.
 - Section 7 gives a single verdict.
 
+## Two-stage review (harness repos)
+
+対象: `.harness/review/manifest.md` があるリポ、または呼出し側が「二段レビュー」を指定した場合。手順の正典は agent-harness の `docs/review-protocol.md`（agent-harness リポ内）。
+
+0. **適用濃淡は review-protocol.md の「適用濃淡（risk連動）」に従う** — 通常変更（risk=none・小〜中差分）は Codex 敵対レビュー1回＋Stage 2 チェックリストで足りる。二段フルは高リスク（isolation/payment/settlement/PII/legal）・self-update・大差分・重大指摘後の再提出に適用する。
+1. **Stage 1 — 自由レビュー**: 対象リポの `.claude/review-checklist.md` を**開かずに**行う（アンカリング回避）。Claude＋Codex の両方で実施。
+2. **Stage 2 — チェックリスト狙い撃ち**: `.claude/review-checklist.md` を読み、各項目を staged diff に対して個別に pass/fail/n-a 判定する。Claude＋Codex の両方で実施（Codex に「Claude既知アンチパターン一覧」を渡すのは**この段のみ**）。
+3. どちらの段も **doc-only を理由に Codex を省略しない**（下記 skip 条項より本節が優先）。
+4. manifest に `self-update: yes` 申告がある場合: ハーネス自己変更として規則の欠落・弱体化・ゲート迂回の混入を重点確認し、報告に「人間承認（approve.sh human — 記録のみ、照合ゲートは未実装）がマージ前に必須」と明記する。
+5. Critical/Important 指摘後の再提出は、**tree/bundle digest が更新された manifest で再レビューを通過**するまで承認可否を出さない（再レビューループ — review-protocol.md 準拠）。
+6. 報告には段ごとの findings と、チェックリスト項目ごとの判定表を含める。
+
 ## Rules
 
 - **You do not commit, push, or modify files.** Review only. The caller decides what to do with the report.
@@ -71,6 +84,6 @@ After Codex returns:
 
 Skip Codex dispatch only if:
 - Caller explicitly said `--no-codex` or similar.
-- Scope is a doc-only change (Markdown / comments) where Codex adds no signal.
+- Scope is a doc-only change (Markdown / comments) where Codex adds no signal — **ただし対象リポの AGENTS.md にコミット前 Codex 敵対レビュー必須の定め（規則i）がある場合、および `.harness/review/manifest.md` があるリポでは、doc-only を理由にした省略を禁止**。
 
 In those cases, note in the report that Codex was skipped and why.
