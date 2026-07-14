@@ -30,6 +30,9 @@
 - **委託基準**: 独立タスクが2個以上ある、または設計/実装/レビューを分離する価値がある実装作業は subagent に委託（subagent駆動開発）。小修正（数行の変更・設定編集・確認コマンド）は直接実行してよい
 - **計画/実行ワークフローは superpowers に一本化**（brainstorming → writing-plans → executing-plans / subagent-driven-development）
 - **Agent Teams / Workflows は明示指示時のみ**。個人開発スケール＝3〜8 agent。prod操作・push・secret が絡む作業では使わない
+<!-- BEGIN:model-tiers -->
+- **モデルルーティング**: サブエージェント呼出し前に `~/.claude/model-tiers.md` の決定表で能力クラスを判定し、Agent呼出時のmodelで指定（曖昧・複数該当=high-riskへ昇格）。レビューは複雑度サブ表（Codex/Claude両レッグ）でモデルを選ぶ。モデル交代時は同ファイルのランブックに従う
+<!-- END:model-tiers -->
 
 <!-- BEGIN:gemini -->
 ## 大きめ参照資料の読み込み（トークン節約）

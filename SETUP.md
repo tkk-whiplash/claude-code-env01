@@ -154,6 +154,10 @@ YESで選ばれた項目に必要な前提が無ければ、**何を・なぜ入
 | **agent-teams** | 複数のAIを**並列実行**して協調作業。`env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`＋`teammateMode=auto`＋workflow警告抑制（分割ペインは tmux/iTerm2 があれば、無ければ画面内パネルに自動フォールバック＝**tmux不要**） | 大きい作業を分担したい人 | トークン約7倍に注意 |
 | **notifications** | **入力待ち**や**作業完了**をデスクトップ通知・プッシュで知らせる | 離席して待つ人 | - |
 | **remote-control** | 起動時に**web/モバイルからの操作**を有効化（リモートで Claude Code を操作） | 外出先から使う人 | - |
+| **model-tiers** | サブエージェントやレビューに**どのモデルを使うかの対応表**（レビューは対象の複雑さでモデルを切替） | サブエージェント/レビューを使う人 | - |
+| **cliproxy** | **ChatGPT のサブスクで GPT 系モデルを Claude Code から起動**できるようにする（`claudex` コマンド）。Claude が使えない時の**予備経路** | ChatGPT Plus/Pro を持つ人 | brew・ChatGPTサブスク |
+
+> `cliproxy` の導入後は手動2ステップ（`cliproxyapi -codex-login` でブラウザ認証 → `brew services start cliproxyapi`）が必要。**CLIProxyAPI の `-claude-login` は絶対に使わないこと**（Anthropic の規約違反になる。GPT 側の認証だけをプロキシに持たせるのがこの構成の安全性の根拠）。
 
 > エージェントハーネス設定（agent-teams/notifications/remote-control）は**好みの領域**。未選択でも基本機能は完全に動く。特に `agent-teams` は実験的＆トークン消費が大きいので、必要を感じてから入れるのが無難。`remote-control` はリモート操作を開くため、セキュリティ観点で不要なら入れない。
 

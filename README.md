@@ -61,6 +61,8 @@ cd claude-code-env01
 | `agent-teams` | Agent Teams（複数AI並列＝env+teammateMode=auto+workflow警告抑制） | settings登録をスキップ |
 | `notifications` | 入力待ち/完了のデスクトップ・プッシュ通知 | settings登録をスキップ |
 | `remote-control` | 起動時にweb/モバイルからの操作を有効化 | settings登録をスキップ |
+| `model-tiers` | モデル対応表（能力クラス→実モデル・**レビュー複雑度サブ表**=Codex/Claude両レッグ） | `~/.claude/model-tiers.md` 配置をスキップ |
+| `cliproxy` | **GPTバックエンドレーン**（CLIProxyAPI＋`claudex`関数＝ChatGPTサブスクでGPT系モデルをClaude Codeから起動・DR用） | brew導入+conf構成+`~/.zshrc`追記をスキップ |
 
 ※ permissions の deny ルール（`~/.codex/auth.json` 含む）は選択に関わらず常に入る — 未導入ツールへのdenyは無害で、後から導入した時の保護になるため。
 
@@ -72,7 +74,9 @@ cd claude-code-env01
 |---|---|
 | `claude/CLAUDE.md` | グローバルルール（委託基準・レビュー濃淡・データ保護・**file:// パス併記**＝cmux/Ghostty でクリック起動・Codexループ等）。`<>` は要カスタマイズ |
 | `claude/settings.json` | permissions（auto＋**秘密鍵denyルール**）・プラグイン宣言（superpowers / codex / LSP）・棚卸しフック登録 |
-| `claude/agents/code-reviewer.md` | Claude＋Codexデュアルレビューagent（`model: opus` エイリアス＝バージョンpinしない） |
+| `claude/agents/code-reviewer.md` | Claude＋Codexデュアルレビューagent（`model: opus` エイリアス既定・重量案件は呼出時にmodel上書き＝model-tiers.md参照） |
+| `claude/model-tiers.md` | 能力クラス→実モデル対応表＋レビュー複雑度サブ表（Codex=luna/terra/sol/5.5・Claude=opus/上位モデル）＋claudex運用規約 |
+| `claude/cliproxy/claudex.zsh` | `claudex [sol\|terra\|luna\|5.5]`＝CLIProxyAPI経由でGPT系モデルのClaude Codeを起動するzsh関数（キーはKeychain参照） |
 | `claude/skills/plugin-zip/` | 配布ZIP作成スキル（テスト確認→白ラベル検査→構造検証） |
 | `claude/skills/fetch-js-page/` | JSレンダリング必須ページのPlaywright取得スキル |
 | `claude/hooks/harness-staleness-check.sh` | **棚卸しリマインダー**: 前回棚卸しから90日以上でセッション冒頭に警告（期限内は無音） |
@@ -104,6 +108,25 @@ MCP（setup.shが登録）: codex / gemini-cli / context7 / playwright。Playwri
 ## 運用の型
 
 - **小変更** → Claude単独 or `/code-review`、**重要変更**（認証/決済/DB/本番影響） → デュアルレビュー（code-reviewer agent）
+- **レビューのモデル選択** → 対象の複雑さで切替（`model-tiers` 参照）: Codexレッグ=軽微`luna`/標準`terra`/重量`sol`/fallback`5.5`、Claudeレッグ=標準`opus`（既定）/重量は呼出時に上位モデルへ上書き
 - **計画/実行** → superpowers（brainstorming → writing-plans → subagent駆動）
 - **大型資料の読解** → Gemini委譲（トークン節約）
 - **90日ごと** → 棚卸しリマインダーが発火 → プラグイン・MCP・permissionsを点検し `~/.claude/harness-audit-date` を更新
+
+## GPTバックエンドレーン（`cliproxy`）— Claude が使えない時の避難経路
+
+**ChatGPT Plus/Pro サブスクの Codex OAuth** をローカルプロキシ（[CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI)・homebrew-core収載）に持たせ、Claude Code を `ANTHROPIC_BASE_URL`（Anthropic 公式のゲートウェイ接続機構）でそこへ向けることで、**superpowers・メモリ・エージェント等のハーネスごと GPT 系モデルで動かせる**。
+
+```bash
+claudex            # gpt-5.6-sol で Claude Code 起動
+claudex terra      # gpt-5.6-terra
+claudex luna       # gpt-5.6-luna
+claudex 5.5        # gpt-5.5
+claude             # 通常の Claude（プロキシ非経由・普段どおり）
+```
+
+- セットアップ: `cliproxy` コンポーネント選択 → 手動2ステップ（`cliproxyapi -codex-login` でブラウザ認証 → `brew services start cliproxyapi`）
+- 位置づけは **DR（Claude 障害・移行期の避難）**。常用は非推奨（tool-calling 翻訳層・prompt cache 不使用のため品質は Claude ネイティブに劣る）
+- 規約面: Claude 側は素の認証のまま・**Anthropic OAuth をプロキシに通さない**のが安全性の根拠（2026-02 の Anthropic 規約変更に非抵触）。OpenAI 側は Codex OAuth＋ローカルプロキシ方式を許容（OpenClaw が公式採用）
+- **🚫 CLIProxyAPI の `-claude-login` は絶対に使わない**（Anthropic 規約違反・BAN 実績あり）
+- 設定は `127.0.0.1` bind・conf 権限600・ローカルキーは Keychain（`cliproxyapi-local-key`）。本キットの設定改ざん防止フックは settings.json への `ANTHROPIC_BASE_URL` 注入を deny するが、claudex は **シェル環境変数方式**なので保護と両立する
