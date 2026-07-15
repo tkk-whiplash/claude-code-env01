@@ -17,8 +17,11 @@ fi
 cmd=$(printf '%s' "$input" | jq -r '.tool_input.command // empty' 2>/dev/null)
 [[ -z "$cmd" ]] && exit 0
 
-# 連続空白を単一化して評価しやすく
-norm=$(printf '%s' "$cmd" | tr '\n\t' '  ' | tr -s ' ')
+# 正規化: まず行継続（\+改行）を空白へ畳む（一律 ";" 化すると `rm -rf \<改行>/` が規則1から漏れる退行
+# — CCR 2026-07-15 sol Critical）。残る改行はコマンドセパレータ＝";" へ（空白化すると多行コマンドの境界が
+# 消え「コマンド位置」判定をすり抜ける — 同 I-1）。タブ→空白・連続空白を単一化
+cmd=${cmd//$'\\\n'/ }
+norm=$(printf '%s' "$cmd" | tr '\t' ' ' | tr '\n' ';' | tr -s ' ')
 # クォート(' ")を除去した走査用文字列。rm -rf "$HOME" / dd of="/dev/disk2" 等のクォート迂回を防ぐ
 scan=$(printf '%s' "$norm" | tr -d '\042\047')
 
@@ -79,8 +82,12 @@ if printf '%s' "$scan" | grep -qiE '\b(curl|wget|fetch)\b[^|;&]*\|[[:space:]]*(s
   ask "リモート取得物をシェルに直接パイプしています。内容を確認のうえ承認してください。"
 fi
 
-# 8) sudo（管理者権限）→ ask（確認強制・遮断はしない）。コマンド位置のみ判定＝文字列中の "sudo" は誤検知しない
-if printf '%s' "$scan" | grep -qE '(^|[|;&]|\$\()[[:space:]]*sudo([[:space:]]|$)'; then
+# 8) sudo（管理者権限）→ ask（確認強制・遮断はしない）。コマンド位置のみ判定＝単純な文字列中の "sudo" は
+#    誤検知しない（ただし区切り文字を含む引用文字列は安全側に ask になりうる）。軽量ラッパー（env/command/
+#    nohup/xargs — オプション・NAME=値・数値引数付きを含む）・絶対パス・\エスケープ・sudoedit もコマンド位置
+#    なら捕捉。**限界（文書化）**: bash -c 等の内側・ここに挙げた以外のラッパー・複雑な引数形は対象外＝事故防止層
+SUDO_WRAP='((env|command|nohup|xargs)([[:space:]]+(-{1,2}[^[:space:]|;&]*|[A-Za-z_][A-Za-z_0-9]*=[^[:space:]|;&]*|[0-9]+))*[[:space:]]+)*'
+if printf '%s' "$scan" | grep -qE '(^|[|;&]|\$\()[[:space:]]*'"$SUDO_WRAP"'\\?(/usr/bin/|/bin/|/usr/local/bin/|/opt/homebrew/bin/)?sudo(edit)?([[:space:]]|$)'; then
   ask "sudo（管理者権限）でのシステム変更です。直前にAIが目的・影響・戻し方を説明しているか確認してから承認してください（説明が無ければ問い返しを）。"
 fi
 

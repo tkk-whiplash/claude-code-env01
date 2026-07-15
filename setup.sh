@@ -3,7 +3,7 @@
 #
 # 使い方:
 #   ./setup.sh                          # 対話形式で1つずつ選択
-#   ./setup.sh --yes                    # 全部入り（質問なし）
+#   ./setup.sh --yes                    # 全部入り（質問なし。制限を加える managed だけは対話opt-in専用）
 #   ./setup.sh --minimal                # 初心者最小構成（security/statusline/cmux のみ）
 #   ./setup.sh --yes --skip=codex,gemini  # codex/gemini連携を除いて全部入り
 #
@@ -34,6 +34,7 @@ TS=$(date +%Y%m%d-%H%M%S)
 
 YES_ALL=0
 SKIP=","
+SETUP_WARN=0   # コンポーネント未完了の集約フラグ（fail-soft でも最終表示で正直に伝える）
 for a in "$@"; do
   case "$a" in
     --yes) YES_ALL=1 ;;
@@ -119,6 +120,7 @@ strip_section() { # $1=マーカー名
 [ "$C_CODEX" = n ] && strip_section codex
 [ "$C_PLAYWRIGHT" = n ] && strip_section playwright
 [ "$C_MODELTIERS" = n ] && strip_section model-tiers
+[ "$C_CLIPROXY" = n ] && strip_section cliproxy
 # 残ったマーカー行は除去
 T2=$(mktemp); grep -v '^<!-- \(BEGIN\|END\):' "$TMP_CM" > "$T2" && mv "$T2" "$TMP_CM"
 # 既存 CLAUDE.md は上書きしない（壊さない）。新版は .new-$TS に出して手動取り込みを促す
@@ -228,12 +230,14 @@ else
   echo "  agent: code-reviewer はスキップ（Codex前提のため）"
 fi
 if [ "$C_MODELTIERS" = y ]; then
+  # 既存は上書きしない（SETUP.md「比較して維持」と整合・CLAUDE.md と同じ .new 方式）
   if [ -f ~/.claude/model-tiers.md ]; then
-    cp ~/.claude/model-tiers.md ~/.claude/model-tiers.md.bak-$TS
-    echo "  退避: model-tiers.md → model-tiers.md.bak-$TS"
+    cp claude/model-tiers.md ~/.claude/model-tiers.md.new-$TS
+    echo "  ⚠ 既存 ~/.claude/model-tiers.md は保持。新版を model-tiers.md.new-$TS に出力 → 差分を確認して手で取り込んでください"
+  else
+    cp claude/model-tiers.md ~/.claude/model-tiers.md
+    echo "  model-tiers.md: 能力クラス→モデル対応表＋レビュー複雑度サブ表（Codex/Claude両レッグ）"
   fi
-  cp claude/model-tiers.md ~/.claude/model-tiers.md
-  echo "  model-tiers.md: 能力クラス→モデル対応表＋レビュー複雑度サブ表（Codex/Claude両レッグ）"
 fi
 [ "$C_ZIP" = y ] && cp -R claude/skills/plugin-zip ~/.claude/skills/ && echo "  skill: plugin-zip"
 if [ "$C_FETCHJS" = y ]; then
@@ -297,33 +301,79 @@ fi
 echo "=== 4/5 CLIツール・gitフック ==="
 if [ "$C_CLIPROXY" = y ]; then
   if command -v brew >/dev/null 2>&1; then
-    brew list cliproxyapi >/dev/null 2>&1 || brew install cliproxyapi
+    if ! brew list cliproxyapi >/dev/null 2>&1; then
+      brew install cliproxyapi || { echo "  ⚠ cliproxyapi の brew install に失敗"; SETUP_WARN=1; }
+    fi
     CONF="$(brew --prefix)/etc/cliproxyapi.conf"
     if [ -f "$CONF" ]; then
       # ローカルAPIキー: Keychain に無ければ生成（画面に出さない）
       security find-generic-password -s cliproxyapi-local-key -w >/dev/null 2>&1 \
-        || security add-generic-password -a "$USER" -s cliproxyapi-local-key -w "$(openssl rand -hex 24)" -U
-      CLIPROXY_KEY="$(security find-generic-password -s cliproxyapi-local-key -w)" CONF="$CONF" python3 - <<'PYEOF'
-import os
+        || security add-generic-password -a "$USER" -s cliproxyapi-local-key -w "$(openssl rand -hex 24)" -U \
+        || true   # 生成失敗は直後の空キーガード（⚠＋SETUP_WARN=1）が受ける
+      # 取得は独立文＋非空検証（env代入前置だと set -e が失敗を拾わず、空キーは `key in s` が常に真になる）
+      CLIPROXY_KEY="$(security find-generic-password -s cliproxyapi-local-key -w 2>/dev/null || true)"
+      if [ -z "$CLIPROXY_KEY" ]; then
+        echo "  ⚠ Keychain からローカルキーを取得できないため conf 構成をスキップ（security コマンドを確認）"
+        SETUP_WARN=1
+      else
+      PY_RC=0
+      CLIPROXY_KEY="$CLIPROXY_KEY" CONF="$CONF" python3 - <<'PYEOF' || PY_RC=$?
+import os, re, sys
 p = os.environ['CONF']; key = os.environ['CLIPROXY_KEY']
+if not key:
+    print('  ⚠ ローカルキーが空のため conf を変更しません'); sys.exit(0)
 s = open(p).read()
+
+def effective_host(text):                               # コメント行を除いた有効なトップレベル host: の値
+    m = re.search(r'^host:[ \t]*"([^"]*)"', text, re.M)
+    return m.group(1) if m else None
+
+def host_is_local(text):
+    return effective_host(text) in ('127.0.0.1', 'localhost')
 ph = 'api-keys:\n  - "your-api-key-1"\n  - "your-api-key-2"\n  - "your-api-key-3"'
-if key in s:                                            # 冪等: Keychainキーが既に設定済み
-    print('  cliproxyapi.conf は構成済み（変更なし）')
+
+def atomic_write(path, data):                           # 0600の一意一時ファイル→fsync→原子的置換（露出窓・部分書込み・同時実行競合なし）
+    import tempfile
+    fd, tmp = tempfile.mkstemp(prefix='.cliproxy-setup.', dir=os.path.dirname(path) or '.')  # mkstemp=0600・一意名
+    try:
+        with os.fdopen(fd, 'w') as f:
+            f.write(data); f.flush(); os.fsync(f.fileno())
+        os.replace(tmp, path)
+    finally:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+
+if key in s:                                            # 冪等: Keychainキーが既に設定済み → bind だけ検証
+    if host_is_local(s):
+        print('  cliproxyapi.conf は構成済み（変更なし）')
+    else:
+        print('  ⚠ キーは設定済みですが有効な host がローカル限定ではありません（現在値: %r）。"127.0.0.1" への変更を推奨' % effective_host(s))
+        sys.exit(3)
 elif ph in s:                                           # 既定形（プレースホルダ完全一致）のみ書き換え=all-or-nothing
     s = s.replace(ph, 'api-keys:\n  - "%s"' % key, 1)
+    done = ['ローカルキー']
     if 'host: ""' in s:                                 # ローカル限定bind（外部からの到達を遮断）
-        s = s.replace('host: ""', 'host: "127.0.0.1"', 1)
+        s = s.replace('host: ""', 'host: "127.0.0.1"', 1); done.append('127.0.0.1 bind')
     if 'disable-control-panel: false' in s:             # 管理パネルの自動DLを無効化
-        s = s.replace('disable-control-panel: false', 'disable-control-panel: true', 1)
-    open(p, 'w').write(s)
-    print('  cliproxyapi.conf を最小構成化（127.0.0.1 bind・ローカルキー・管理パネルDL無効）')
+        s = s.replace('disable-control-panel: false', 'disable-control-panel: true', 1); done.append('管理パネルDL無効')
+    atomic_write(p, s)
+    print('  cliproxyapi.conf を構成: ' + '・'.join(done))  # 実際に行った変更のみ表示（誇張しない）
+    if not host_is_local(s):
+        print('  ⚠ 有効な host がローカル限定になっていません（現在値: %r）。"127.0.0.1" への手動設定を推奨' % effective_host(s))
+        sys.exit(3)
 else:                                                   # 既定形でない=手を入れず警告（部分書込みしない）
     print('  ⚠ cliproxyapi.conf が既定形と異なるため変更しません。api-keys に Keychain の cliproxyapi-local-key の値を手動設定してください')
+    sys.exit(3)
 PYEOF
+      if [ "$PY_RC" != 0 ]; then
+        [ "$PY_RC" != 3 ] && echo "  ⚠ conf 構成スクリプトが異常終了しました（exit=$PY_RC）"
+        SETUP_WARN=1
+      fi
       chmod 600 "$CONF"
+      fi
     else
       echo "  ⚠ $CONF が見つからない（brew install 失敗の可能性）"
+      SETUP_WARN=1
     fi
     if ! grep -q "claudex()" ~/.zshrc 2>/dev/null; then
       cat claude/cliproxy/claudex.zsh >> ~/.zshrc
@@ -333,6 +383,7 @@ PYEOF
     fi
   else
     echo "  ⚠ Homebrew未検出。cliproxy コンポーネントをスキップ"
+    SETUP_WARN=1
   fi
 fi
 if [ "$C_MANAGED" = y ]; then
@@ -342,12 +393,18 @@ if [ "$C_MANAGED" = y ]; then
     echo "  ⚠ $MS が既に存在します。上書きしません（差分確認: diff \"$MS\" claude/managed-settings.json）"
   else
     echo "  managed-settings を設置します（root所有・sudo パスワードを求められます）"
-    if sudo mkdir -p "$MS_DIR" && sudo cp claude/managed-settings.json "$MS" \
-       && sudo chown root:wheel "$MS" && sudo chmod 644 "$MS"; then
+    # 一時ファイルを完成させてから原子的 mv（部分ファイルが残ると次回 [ -f ] で修復まで拒否されるため）
+    if sudo mkdir -p "$MS_DIR" \
+       && TMP_MS=$(sudo mktemp "$MS_DIR/.managed-settings.XXXXXX") \
+       && sudo cp claude/managed-settings.json "$TMP_MS" \
+       && sudo chown root:wheel "$TMP_MS" && sudo chmod 644 "$TMP_MS" \
+       && sudo mv "$TMP_MS" "$MS"; then
       echo "  設置完了: $MS（deny＋bypass封鎖のみ＝日常の不便ゼロ）"
       echo "    外すとき: sudo rm \"$MS\""
     else
-      echo "  ⚠ 設置失敗（sudo 権限を確認してください）"
+      [ -n "${TMP_MS:-}" ] && sudo rm -f "$TMP_MS" 2>/dev/null || true
+      echo "  ⚠ managed の設置は未完了です（部分ファイルは残していません）。sudo 権限を確認して再実行してください"
+      SETUP_WARN=1
     fi
   fi
 fi
@@ -395,7 +452,11 @@ else
 fi
 
 echo ""
-echo "✅ セットアップ完了。残りの手動ステップ:"
+if [ "$SETUP_WARN" = 1 ]; then
+  echo "⚠ セットアップは一部未完了です（上の ⚠ 行を確認して対処してください）。残りの手動ステップ:"
+else
+  echo "✅ セットアップ完了。残りの手動ステップ:"
+fi
 echo "  ・ claude を起動 → 初回にプラグインのインストール/信頼を承認"
 [ "$C_CODEX" = y ] && echo "  ・ Codex CLI で認証（codex でログイン）"
 [ "$C_GEMINI" = y ] && echo "  ・ Gemini CLI で認証"

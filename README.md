@@ -33,7 +33,7 @@ git clone https://github.com/tkk-whiplash/claude-code-env01.git
 cd claude-code-env01
 ./setup.sh                              # 対話形式: 1つずつ Y/n で選択
 ./setup.sh --minimal                    # 初心者最小構成（security/statusline/cmux）
-./setup.sh --yes                        # 全部入り（質問なし）
+./setup.sh --yes                        # 全部入り（質問なし・managed を除く）
 ./setup.sh --yes --skip=codex,gemini    # Codex/Gemini連携なしで全部入り
 ```
 
@@ -82,7 +82,7 @@ cd claude-code-env01
 | `claude/skills/plugin-zip/` | 配布ZIP作成スキル（テスト確認→白ラベル検査→構造検証） |
 | `claude/skills/fetch-js-page/` | JSレンダリング必須ページのPlaywright取得スキル |
 | `claude/hooks/harness-staleness-check.sh` | **棚卸しリマインダー**: 前回棚卸しから90日以上でセッション冒頭に警告（期限内は無音） |
-| `claude/hooks/block-destructive-commands.sh` | **破壊的コマンド遮断**（PreToolUse:Bash）: `rm -rf /`〜`$HOME`/システムパス・`dd of=/dev/`・`mkfs`・fork bomb・`git config --system` を deny、`curl\|sh`・**コマンド位置の `sudo`** を ask（文字列中の sudo は誤検知しない）。プロジェクト内 `rm -rf *` 等は素通り |
+| `claude/hooks/block-destructive-commands.sh` | **破壊的コマンド遮断**（PreToolUse:Bash）: `rm -rf /`〜`$HOME`/システムパス・`dd of=/dev/`・`mkfs`・fork bomb・`git config --system` を deny、`curl\|sh`・**コマンド位置の `sudo`**（多行・軽量ラッパー・絶対パス含む）を ask。単純な文字列中の sudo は誤検知しないが、**区切り文字を含む引用文字列は安全側に ask になりうる**。プロジェクト内 `rm -rf *` 等は素通り |
 | `claude/hooks/protect-settings.sh` | **設定改ざん防止**（PreToolUse:Edit/Write）: settings.json/CLAUDE.md への `skipAutoPermissionPrompt`・`enableAllProjectMcpServers:true`・`ANTHROPIC_BASE_URL` 等の権限破壊キー注入を deny |
 | `claude/statusline-command.sh` | **ステータスライン**: コンテキスト使用率（色付きバー）・Claude 5時間レート制限・Codex使用量（リセット時刻＋残り時間）・**稼働中エージェント**（このセッションの `in_progress` タスク数＋経過時間。`⚙`、20分超は黄色でstall警告）・モデル名・gitブランチ・カレントディレクトリ（要 `jq`） |
 | `claude/cmux/cmux.json` | **cmux クリック設定**: `openSupportedFilesInCmux=true`（Cmd+クリック→内蔵プレビュー）。`~/.config/cmux/` に配置（**cmux検出時のみ**。Ghostty等ではスキップ） |

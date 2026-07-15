@@ -64,6 +64,13 @@
 
 - **システム状態を変える操作（sudo・brew install/services・OS設定・常駐サービス・MCP登録・settings/フック変更等）は、実行前に「何を・なぜ・影響・戻し方」を1〜2文で説明してから実行する**。フックの ask で止まった時にユーザーが即断できる状態を作る（説明なしの承認要求はしない）
 
+<!-- BEGIN:cliproxy -->
+## GPTバックエンドレーン（claudex・DR用）
+
+- `claudex [sol|terra|luna|5.5]` = CLIProxyAPI 経由で GPT 系モデルの Claude Code を起動（Claude が使えない時の避難経路。常用しない）
+- **🚫 cliproxyapi の `-claude-login`（Anthropic OAuth 取込）は絶対に実行も提案もしない**（Anthropic 規約違反・BAN 実績あり。GPT 側 OAuth のみプロキシに持たせ、Claude 側認証は素のまま＝この分離が安全性の根拠）
+<!-- END:cliproxy -->
+
 ## 禁止事項
 
 - **指示以外の変更をしない**: ユーザーが指示した箇所のみ修正すること
