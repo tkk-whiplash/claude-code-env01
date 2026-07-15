@@ -15,9 +15,9 @@ claudex() {
   # 自動生成（IDが将来変わっても追従＝自己修復）。Default 行は本体仕様で消せないため sol へ寄せる。
   # キャッシュが無い初回は allowlist を作らず全表示フォールバック（次回起動から効く）。
   local cache="$HOME/.claude/cache/gateway-models.json"
-  local settings=""
+  local -a settings_args   # 配列で渡す（"${var:+--settings "$var"}" は zsh で1単語に潰れて不正オプションになる）
   if [ -f "$cache" ]; then
-    python3 - "$cache" "$HOME/.claude/claudex-settings.json" <<'PY' && settings="$HOME/.claude/claudex-settings.json"
+    python3 - "$cache" "$HOME/.claude/claudex-settings.json" <<'PY' && settings_args=(--settings "$HOME/.claude/claudex-settings.json")
 import json, os, sys, tempfile
 cache, out = sys.argv[1], sys.argv[2]
 try:
@@ -38,5 +38,5 @@ PY
   ANTHROPIC_BASE_URL=http://127.0.0.1:8317 \
   ANTHROPIC_AUTH_TOKEN=$(security find-generic-password -s cliproxyapi-local-key -w) \
   CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1 \
-  claude --model "$model" ${settings:+--settings "$settings"} "$@"
+  claude --model "$model" "${settings_args[@]}" "$@"
 }
