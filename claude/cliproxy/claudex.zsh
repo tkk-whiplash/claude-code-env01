@@ -3,6 +3,8 @@
 # 禁止: cliproxyapi の -claude-login（Anthropic OAuth取込）は絶対に使わない（規約違反・BAN実績あり。
 #       この構成の安全性は「GPT側OAuthのみプロキシに持たせ、Claude側認証は素のまま」の分離が根拠）
 # 使い方: claudex（既定=sol）/ claudex terra / claudex luna / claudex 5.5 / claudex gpt-5.4 …残り引数はclaudeへ透過
+# セッション内の切替: /model にモデル名を直打ち、または /model ピッカーを↑スクロール（「From gateway」= プロキシ提供モデル。
+#   GATEWAY_MODEL_DISCOVERY がプロキシの /v1/models を自動取得する。BASE_URL 無しでは不活性=素の claude に影響なし）
 claudex() {
   local model="gpt-5.6-sol"
   case "$1" in
@@ -12,5 +14,6 @@ claudex() {
   esac
   ANTHROPIC_BASE_URL=http://127.0.0.1:8317 \
   ANTHROPIC_AUTH_TOKEN=$(security find-generic-password -s cliproxyapi-local-key -w) \
+  CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1 \
   claude --model "$model" "$@"
 }
