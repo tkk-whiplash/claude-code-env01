@@ -27,6 +27,7 @@
 #   remote-control 起動時にリモート操作を有効化（web/モバイルから操作）
 #   model-tiers  モデル対応表（能力クラス→実モデル・レビュー複雑度サブ表）
 #   cliproxy     GPTバックエンドレーン（CLIProxyAPI＋claudex関数・ChatGPTサブスクでGPT系モデル起動）
+#   managed      組織強制設定（配布端末/非エンジニア向け・root所有managed-settings＝deny+bypass封鎖。--yesでは入らない）
 set -e
 cd "$(dirname "$0")"
 TS=$(date +%Y%m%d-%H%M%S)
@@ -36,9 +37,9 @@ SKIP=","
 for a in "$@"; do
   case "$a" in
     --yes) YES_ALL=1 ;;
-    --minimal) YES_ALL=1; SKIP=",superpowers,lsp,mdmgmt,codex,gemini,context7,playwright,staleness,gitleaks,zip,fetchjs,agent-teams,notifications,remote-control,model-tiers,cliproxy," ;;
+    --minimal) YES_ALL=1; SKIP=",superpowers,lsp,mdmgmt,codex,gemini,context7,playwright,staleness,gitleaks,zip,fetchjs,agent-teams,notifications,remote-control,model-tiers,cliproxy,managed," ;;
     --skip=*) SKIP=",${a#--skip=}," ;;
-    -h|--help) sed -n '2,30p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,31p' "$0"; exit 0 ;;
   esac
 done
 
@@ -71,6 +72,11 @@ C_NOTIFICATIONS=$(ask notifications "通知＝入力待ち/作業完了をデス
 C_REMOTECONTROL=$(ask remote-control "リモート操作＝起動時にweb/モバイルからの操作を有効化")
 C_MODELTIERS=$(ask model-tiers "モデル対応表（能力クラス→実モデル・レビュー複雑度サブ表を ~/.claude/model-tiers.md に配置）")
 C_CLIPROXY=$(ask cliproxy "GPTバックエンドレーン（CLIProxyAPI＋claudex＝ChatGPTサブスクでGPT系モデルをClaude Codeから起動・DR用）")
+if [ "$YES_ALL" = 1 ]; then
+  C_MANAGED=n   # 制限を加える系は --yes で勝手に入れない（対話実行でのみ提案）
+else
+  C_MANAGED=$(ask managed "組織強制設定（配布端末/非エンジニア向け。認証情報denyとbypassPermissions封鎖を root 所有で固定＝ユーザー側で変更不能。自分の開発機には通常不要）")
+fi
 
 echo ""
 echo "=== 前提ツールの確認（書き込み前にチェック） ==="
@@ -327,6 +333,22 @@ PYEOF
     fi
   else
     echo "  ⚠ Homebrew未検出。cliproxy コンポーネントをスキップ"
+  fi
+fi
+if [ "$C_MANAGED" = y ]; then
+  MS_DIR="/Library/Application Support/ClaudeCode"
+  MS="$MS_DIR/managed-settings.json"
+  if [ -f "$MS" ]; then
+    echo "  ⚠ $MS が既に存在します。上書きしません（差分確認: diff \"$MS\" claude/managed-settings.json）"
+  else
+    echo "  managed-settings を設置します（root所有・sudo パスワードを求められます）"
+    if sudo mkdir -p "$MS_DIR" && sudo cp claude/managed-settings.json "$MS" \
+       && sudo chown root:wheel "$MS" && sudo chmod 644 "$MS"; then
+      echo "  設置完了: $MS（deny＋bypass封鎖のみ＝日常の不便ゼロ）"
+      echo "    外すとき: sudo rm \"$MS\""
+    else
+      echo "  ⚠ 設置失敗（sudo 権限を確認してください）"
+    fi
   fi
 fi
 if [ "$C_GITLEAKS" = y ]; then

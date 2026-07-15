@@ -1,0 +1,30 @@
+{
+  "_comment": "組織強制設定（managed-settings）テンプレート — 配布端末/非エンジニア向け。/Library/Application Support/ClaudeCode/managed-settings.json に root 所有で設置すると、ユーザー設定・プロジェクト設定・Claude 自身のどれからも上書き不能になる。中身は『読む正当理由がない認証情報の deny』と『bypassPermissions の封鎖』のみ＝日常作業の不便はゼロ。アンインストール: sudo rm '/Library/Application Support/ClaudeCode/managed-settings.json'",
+  "permissions": {
+    "deny": [
+      "Read(~/.ssh/**)",
+      "Read(~/.aws/**)",
+      "Read(~/.netrc)",
+      "Read(~/.claude/.credentials.json)",
+      "Read(~/.codex/auth.json)",
+      "Read(~/.config/gh/hosts.yml)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)",
+      "Read(**/id_rsa*)",
+      "Read(**/id_ed25519*)",
+      "Read(**/.env.production)",
+      "Read(**/.env.prod)",
+      "Read(**/.env.production.local)",
+      "Read(~/.env)",
+      "Read(**/secrets/**)",
+      "Read(**/*.p12)",
+      "Read(**/*.pfx)",
+      "Read(**/*.keystore)",
+      "Read(~/.kube/**)",
+      "Read(~/.docker/config.json)",
+      "Read(~/.npmrc)",
+      "Read(~/.pypirc)"
+    ],
+    "disableBypassPermissionsMode": "disable"
+  }
+}

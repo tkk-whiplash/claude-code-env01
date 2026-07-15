@@ -11,7 +11,7 @@
 1. **既存設定を壊さない。** 必ず先にバックアップ → **マージ**（置換しない）。ユーザーの今の `settings.json`/`CLAUDE.md` の独自設定を消さない。
 2. **差分だけ提案する。** ユーザーの現状を調べ、**既に入っている項目は「導入済み」と伝えてスキップ**。未導入・改善できるものだけ聞く。
 3. **非エンジニアにも分かる言葉で。** 専門用語は必ずかみ砕く。1項目ずつ「○○（やさしい説明）を導入しますか？ YES/NO」で確認。
-4. **不可逆・広範な変更は実行前に必ず一言断る。** 例: 既定アプリ変更(duti)、`brew install`、MCP登録。
+4. **不可逆・広範な変更は実行前に必ず「何を・なぜ・影響・戻し方」を説明してから承認を得る。** 例: 既定アプリ変更(duti)、`brew install`、MCP登録、sudo を伴う設置。理由なしの承認要求はしない。
 5. **日本語で進行。** 各ステップで何をしているか短く実況する。
 6. **リポジトリは「強制標準」ではなく「選択肢のメニュー」。** ユーザーの既存環境の方が優れている、または本人の用途・環境に合わない項目は**無理に入れない**。項目ごとに「これは本当にこの人にとって改善になるか？」を**その都度判断**し、ならない場合は理由を添えてスキップ（または現状維持を推奨）する。AIの役割は標準への画一化ではなく、その人の環境を**ネットで良くすること**。
 
@@ -112,6 +112,7 @@ YESで選ばれた項目に必要な前提が無ければ、**何を・なぜ入
    - 「ファイルをクリックで開くエディタは何を使いますか？（VS Code / Cursor / Zed など）」と聞き、`bash claude/cmux/set-editor-default.sh "<エディタ名>"` を**既定変更の確認を取ってから**実行。
 7. **model-tiers**（選択時）: 既存 `~/.claude/model-tiers.md` があれば**内容を比較**し、ユーザー版の方が作り込まれていれば維持を勧める（勝手に上書きしない）。無ければ `claude/model-tiers.md` をコピー。CLAUDE.md 側のモデルルーティング節（`model-tiers` マーカー内）も残す。
 8. **cliproxy**（選択時・`brew install` を伴うため実行前に必ず一言）: 最も確実なのは該当コンポーネントだけ setup.sh に任せること（例: `./setup.sh --yes --skip=<cliproxy以外の全キー>`。冪等＝再実行安全）。手動で行う場合は setup.sh の cliproxy ブロックと**同一手順**を守る: ①Keychain に `cliproxyapi-local-key` が無ければ生成（**キー値を画面に出さない**）②conf（`$(brew --prefix)/etc/cliproxyapi.conf`）は **api-keys プレースホルダ完全一致時のみ**書き換え（部分書込み禁止・既定形でなければ触らず手動設定を案内）③`chmod 600` ④`~/.zshrc` への claudex 追記は `grep -q "claudex()"` で冪等に。最後にユーザーの手動2ステップ（`cliproxyapi -codex-login` → `brew services start cliproxyapi`）を案内する。**`-claude-login` は絶対に実行も案内もしない**（Anthropic 規約違反）。
+9. **managed**（選択時・sudo を伴うため実行前に必ず一言）: 対象は**配布端末/非エンジニアのPC**（本人の開発機に勝手に入れない）。`/Library/Application Support/ClaudeCode/managed-settings.json` が既にあれば**上書きせず差分提示**。無ければ `claude/managed-settings.json` を `sudo` で設置（root:wheel・644）。**中身を増やさない**（deny＋bypass封鎖のみ＝制限し過ぎない方針）。外し方（`sudo rm`）も必ず伝える。
 
 ---
 
@@ -159,6 +160,7 @@ YESで選ばれた項目に必要な前提が無ければ、**何を・なぜ入
 | **remote-control** | 起動時に**web/モバイルからの操作**を有効化（リモートで Claude Code を操作） | 外出先から使う人 | - |
 | **model-tiers** | サブエージェントやレビューに**どのモデルを使うかの対応表**（レビューは対象の複雑さでモデルを切替） | サブエージェント/レビューを使う人 | - |
 | **cliproxy** | **ChatGPT のサブスクで GPT 系モデルを Claude Code から起動**できるようにする（`claudex` コマンド）。Claude が使えない時の**予備経路** | ChatGPT Plus/Pro を持つ人 | brew・ChatGPTサブスク |
+| **managed** | **管理者ロック付きの安全設定**（認証情報の読み取り禁止と、確認なし全自動モードの封鎖を、本人にも変えられない形で固定） | 他人に配る端末・非エンジニアのPC | sudo権限 |
 
 > `cliproxy` の導入後は手動2ステップ（`cliproxyapi -codex-login` でブラウザ認証 → `brew services start cliproxyapi`）が必要。**CLIProxyAPI の `-claude-login` は絶対に使わないこと**（Anthropic の規約違反になる。GPT 側の認証だけをプロキシに持たせるのがこの構成の安全性の根拠）。
 

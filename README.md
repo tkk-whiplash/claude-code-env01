@@ -63,6 +63,7 @@ cd claude-code-env01
 | `remote-control` | 起動時にweb/モバイルからの操作を有効化 | settings登録をスキップ |
 | `model-tiers` | モデル対応表（能力クラス→実モデル・**レビュー複雑度サブ表**=Codex/Claude両レッグ） | `~/.claude/model-tiers.md` 配置をスキップ |
 | `cliproxy` | **GPTバックエンドレーン**（CLIProxyAPI＋`claudex`関数＝ChatGPTサブスクでGPT系モデルをClaude Codeから起動・DR用） | brew導入+conf構成+`~/.zshrc`追記をスキップ |
+| `managed` | **組織強制設定**（配布端末/非エンジニア向け・root所有 managed-settings＝認証情報deny＋bypass封鎖を変更不能に） | 設置をスキップ（**--yes でも入らない**＝対話実行での明示opt-inのみ） |
 
 ※ permissions の deny ルール（`~/.codex/auth.json` 含む）は選択に関わらず常に入る — 未導入ツールへのdenyは無害で、後から導入した時の保護になるため。
 
@@ -77,10 +78,11 @@ cd claude-code-env01
 | `claude/agents/code-reviewer.md` | Claude＋Codexデュアルレビューagent（`model: opus` エイリアス既定・重量案件は呼出時にmodel上書き＝model-tiers.md参照） |
 | `claude/model-tiers.md` | 能力クラス→実モデル対応表＋レビュー複雑度サブ表（Codex=luna/terra/sol/5.5・Claude=opus/上位モデル）＋claudex運用規約 |
 | `claude/cliproxy/claudex.zsh` | `claudex [sol\|terra\|luna\|5.5]`＝CLIProxyAPI経由でGPT系モデルのClaude Codeを起動するzsh関数（キーはKeychain参照） |
+| `claude/managed-settings.json` | 組織強制設定テンプレート（`/Library/Application Support/ClaudeCode/` に root 所有で設置＝ユーザー/プロジェクト設定・Claude自身から上書き不能。中身は認証情報deny＋`disableBypassPermissionsMode` のみ） |
 | `claude/skills/plugin-zip/` | 配布ZIP作成スキル（テスト確認→白ラベル検査→構造検証） |
 | `claude/skills/fetch-js-page/` | JSレンダリング必須ページのPlaywright取得スキル |
 | `claude/hooks/harness-staleness-check.sh` | **棚卸しリマインダー**: 前回棚卸しから90日以上でセッション冒頭に警告（期限内は無音） |
-| `claude/hooks/block-destructive-commands.sh` | **破壊的コマンド遮断**（PreToolUse:Bash）: `rm -rf /`〜`$HOME`/システムパス・`dd of=/dev/`・`mkfs`・fork bomb・`git config --system` を deny、`curl\|sh` を ask。プロジェクト内 `rm -rf *` 等は素通り |
+| `claude/hooks/block-destructive-commands.sh` | **破壊的コマンド遮断**（PreToolUse:Bash）: `rm -rf /`〜`$HOME`/システムパス・`dd of=/dev/`・`mkfs`・fork bomb・`git config --system` を deny、`curl\|sh`・**コマンド位置の `sudo`** を ask（文字列中の sudo は誤検知しない）。プロジェクト内 `rm -rf *` 等は素通り |
 | `claude/hooks/protect-settings.sh` | **設定改ざん防止**（PreToolUse:Edit/Write）: settings.json/CLAUDE.md への `skipAutoPermissionPrompt`・`enableAllProjectMcpServers:true`・`ANTHROPIC_BASE_URL` 等の権限破壊キー注入を deny |
 | `claude/statusline-command.sh` | **ステータスライン**: コンテキスト使用率（色付きバー）・Claude 5時間レート制限・Codex使用量（リセット時刻＋残り時間）・**稼働中エージェント**（このセッションの `in_progress` タスク数＋経過時間。`⚙`、20分超は黄色でstall警告）・モデル名・gitブランチ・カレントディレクトリ（要 `jq`） |
 | `claude/cmux/cmux.json` | **cmux クリック設定**: `openSupportedFilesInCmux=true`（Cmd+クリック→内蔵プレビュー）。`~/.config/cmux/` に配置（**cmux検出時のみ**。Ghostty等ではスキップ） |
@@ -100,10 +102,11 @@ MCP（setup.shが登録）: codex / gemini-cli / context7 / playwright。Playwri
 
 1. **denyルール**: ~/.ssh・~/.aws・*.pem・*.key・auth/credentials系に加え、本番/秘密系env（`.env.production` 等）・`secrets/**`・`*.p12`/`*.pfx`/`*.keystore`・`~/.kube`・`~/.docker/config.json`・`~/.npmrc`・`~/.pypirc` の Read を機械的に禁止。**`.env` の扱い**: ホームの `~/.env` のみ deny、プロジェクト直下の `.env`/`.env.local` は編集ワークフロー維持のため**許可**（本番系 `.env.production` 等は deny）
 2. **破壊的コマンド遮断フック**（`security`）: 致命的な `rm -rf`・`dd of=/dev/`・`mkfs`・fork bomb・`git config --system` を PreToolUse で deny、`curl|sh` を ask。指示（遵守率は確率的）ではなくフックで決定論的に止める。**完全防御ではなく事故防止層**（変数経由 `A=/; rm -rf "$A"` やセパレータ跨ぎは検知外）。`jq` 不在時は fail-closed で `ask` に倒す
-3. **設定改ざん防止フック**（`security`）: settings.json/CLAUDE.md への権限無効化キー（`skipAutoPermissionPrompt` 等）注入を deny。CVE-2025-59536/2026-21852 クラスの「設定経由の権限破壊」への自衛。**限界**: Edit/Write 経由のみ検知。**Bash 経由（`echo >> settings.json` 等）の書き込みは検知範囲外**（浅い自衛層）＝`.claude/` と CLAUDE.md は git diff のレビュー対象に含めること
+3. **設定改ざん防止フック**（`security`）: settings.json/CLAUDE.md への権限無効化キー（`skipAutoPermissionPrompt` 等）注入を deny。CVE-2025-59536/2026-21852 クラスの「設定経由の権限破壊」への自衛。**限界**: Edit/Write 経由のみ検知。**Bash 経由（`echo >> settings.json` 等）の書き込みは検知範囲外**（浅い自衛層）＝`.claude/` と CLAUDE.md は git diff のレビュー対象に含めること。**確実に固定したい配布端末では `managed` コンポーネント**（root所有 managed-settings）が上位の防御層になる
 4. **Keychain運用**: 秘密値は `security add-generic-password -a "$USER" -s <名前> -w <値> -U` で保管し、メモには `KEYCHAIN(名前)` ポインタのみ。使う時は `$(security find-generic-password -s <名前> -w)` で**値を表示せずコマンドに注入**（AIのコンテキスト＝外部API送信に載せない）
 5. **gitleaks pre-commit**: コミット時に秘密情報を自動スキャン。誤検知時は `SKIP_GITLEAKS=1 git commit ...`、恒久除外は `.gitleaksignore`。※ **gitleaks 未導入の環境ではスキャンされず通過（fail-open）**＝全コミット不能を避ける設計。確実にしたい人は gitleaks を導入すること
 6. **運用ルール**（CLAUDE.mdデータ保護節）: .env全文エコー禁止・顧客個人情報はローカルpython処理・外部AIに顧客データファイルを渡さない
+7. **組織強制層**（`managed`・任意）: `/Library/Application Support/ClaudeCode/managed-settings.json`（root所有）は**全設定の最上位でユーザー側から変更不能**。配布端末・非エンジニア向けに認証情報 deny と `--dangerously-skip-permissions` の封鎖を固定する。**制限し過ぎない方針**: 中身は「読む正当理由がないファイルのdeny」と「bypass封鎖」のみ＝日常作業の確認回数は増えない。sudo は破壊的コマンドフック側で **ask**（遮断でなく確認1回）。外すのも `sudo rm` 一発で可逆
 
 ## 運用の型
 
