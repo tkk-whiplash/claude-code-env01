@@ -110,6 +110,8 @@ YESで選ばれた項目に必要な前提が無ければ、**何を・なぜ入
 6. **cmux / クリック設定**（選択時）:
    - cmux があれば `claude/cmux/cmux.json` を `~/.config/cmux/` にマージ（バックアップ後）し `cmux reload-config`。Ghostty 等なら cmux.json はスキップ。
    - 「ファイルをクリックで開くエディタは何を使いますか？（VS Code / Cursor / Zed など）」と聞き、`bash claude/cmux/set-editor-default.sh "<エディタ名>"` を**既定変更の確認を取ってから**実行。
+7. **model-tiers**（選択時）: 既存 `~/.claude/model-tiers.md` があれば**内容を比較**し、ユーザー版の方が作り込まれていれば維持を勧める（勝手に上書きしない）。無ければ `claude/model-tiers.md` をコピー。CLAUDE.md 側のモデルルーティング節（`model-tiers` マーカー内）も残す。
+8. **cliproxy**（選択時・`brew install` を伴うため実行前に必ず一言）: 最も確実なのは該当コンポーネントだけ setup.sh に任せること（例: `./setup.sh --yes --skip=<cliproxy以外の全キー>`。冪等＝再実行安全）。手動で行う場合は setup.sh の cliproxy ブロックと**同一手順**を守る: ①Keychain に `cliproxyapi-local-key` が無ければ生成（**キー値を画面に出さない**）②conf（`$(brew --prefix)/etc/cliproxyapi.conf`）は **api-keys プレースホルダ完全一致時のみ**書き換え（部分書込み禁止・既定形でなければ触らず手動設定を案内）③`chmod 600` ④`~/.zshrc` への claudex 追記は `grep -q "claudex()"` で冪等に。最後にユーザーの手動2ステップ（`cliproxyapi -codex-login` → `brew services start cliproxyapi`）を案内する。**`-claude-login` は絶対に実行も案内もしない**（Anthropic 規約違反）。
 
 ---
 
@@ -128,6 +130,7 @@ YESで選ばれた項目に必要な前提が無ければ、**何を・なぜ入
 - **残りの手動ステップ**を案内:
   - 「**Claude Code を再起動**すると、安全装置（フック）と画面下の表示が有効になります」
   - Codex/Gemini を入れたなら「各CLIで一度ログインが必要」
+  - cliproxy を入れたなら「`cliproxyapi -codex-login`（ブラウザで ChatGPT アカウント認証）→ `brew services start cliproxyapi` → 新しいターミナルで `claudex`」
   - 「秘密のパスワードやAPIキーは、ファイルに書かず **macOS Keychain** に保存しましょう」
   - CLAUDE.md の `<>` を本人用に直す
 - 「あとで設定を見直したくなったら、また『このリポジトリで見直して』と言ってください」と添える。
