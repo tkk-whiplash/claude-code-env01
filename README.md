@@ -125,13 +125,14 @@ claudex            # gpt-5.6-sol で Claude Code 起動
 claudex terra      # gpt-5.6-terra
 claudex luna       # gpt-5.6-luna
 claudex 5.5        # gpt-5.5
+claudex 5.4        # gpt-5.4
 claude             # 通常の Claude（プロキシ非経由・普段どおり）
 ```
 
 - セットアップ: `cliproxy` コンポーネント選択 → 手動2ステップ（`cliproxyapi -codex-login` でブラウザ認証 → `brew services start cliproxyapi`）
-- モデル切替: `/model` ピッカーは**素のまま**（Default/Opus/Sonnet/Haiku）。スロット割当 env（`ANTHROPIC_DEFAULT_{OPUS,SONNET,HAIKU,FABLE}_MODEL`）により **Opus→Sol / Sonnet→Terra / Haiku→Luna** に解決される＝ピッカー切替が実質GPT切替（実測検証済み: `--model opus` 起動でバックエンド着弾モデル=`gpt-5.6-sol`）。切替は **`s` キー（セッション限定）推奨**。effort は公式サフィックス書式 `claudex "gpt-5.6-sol(xhigh)"`
-- 仕組み: CLIProxyAPI 公式推奨の「env のみ」構成（BASE_URL＋AUTH_TOKEN＋スロット割当＋`CLAUDE_CODE_SUBAGENT_MODEL`）。**discovery / availableModels / settings 自動生成は不使用**（Anthropic 公式が非Claudeモデルのゲートウェイルーティングをサポート外と明言しており、ピッカー統合は既知不具合が多いため 2026-07-16 に全撤去）。すべて claudex 関数内のみ＝素の `claude` は不変
-- 保険: `_claudex_model_guard`（起動前後で settings.json の model を退避・GPT名/難読名の汚染を検知したら自動復元）。`/model gpt-5.6-luna` 直打ちが Enter 相当でグローバル保存される公式仕様（v2.1.153+）への対策
+- モデル切替: `/model` ピッカーは**素のまま**（Default/Opus/Sonnet/Haiku）。スロット割当 env（`ANTHROPIC_DEFAULT_{OPUS,SONNET,HAIKU,FABLE}_MODEL`）により **Opus→Sol / Sonnet→Terra / Haiku→Luna** に解決される＝ピッカー切替が実質GPT切替（実測検証済み: `--model opus` 起動でバックエンド着弾モデル=`gpt-5.6-sol`）。切替は **`s` キー（セッション限定）推奨**（Enter は選択を素の claude と共用の settings.json にデフォルト保存する: GPT名直打ちの保存はガードが復元するが、Opus 等の正当なエイリアス保存は復元対象外＝普段の既定モデルが変わったままになる）。サブエージェントは `CLAUDE_CODE_SUBAGENT_MODEL` により **Sol 固定**（スロット割当はメインのみ）。effort は公式サフィックス書式 `claudex "gpt-5.6-sol(xhigh)"`
+- 仕組み: CLIProxyAPI 公式推奨の「env のみ」構成（BASE_URL＋AUTH_TOKEN＋スロット割当＋`CLAUDE_CODE_SUBAGENT_MODEL`）。**discovery / availableModels / settings 自動生成は不使用**（Anthropic 公式が非Claudeモデルのゲートウェイルーティングをサポート外と明言しており、ピッカー統合は既知不具合が多いため 2026-07-16 に全撤去）。設定はすべて claudex 関数内の env のみ＝素の `claude` の設定ファイルには手を入れない（例外は上記 Enter 保存）
+- 保険: `_claudex_model_guard`（起動前後で settings.json の model を退避・GPT名/難読名の汚染を検知したら自動復元）。`/model gpt-5.6-luna` 直打ちが Enter 相当でグローバル保存される公式仕様（v2.1.153+）への対策。**制約**: settings.json が破損（パース不能）の間は保険が効かない／claudex の同時多重起動は非対応（退避ファイルが1本のため）
 - 位置づけは **DR（Claude 障害・移行期の避難）**。常用は非推奨（tool-calling 翻訳層・prompt cache 不使用のため品質は Claude ネイティブに劣る）
 - 規約面: Claude 側は素の認証のまま・**Anthropic OAuth をプロキシに通さない**のが安全性の根拠（2026-02 の Anthropic 規約変更に非抵触）。OpenAI 側は Codex OAuth＋ローカルプロキシ方式を許容（OpenClaw が公式採用）
 - **🚫 CLIProxyAPI の `-claude-login` は絶対に使わない**（Anthropic 規約違反・BAN 実績あり）
